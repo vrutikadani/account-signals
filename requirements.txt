@@ -1,0 +1,2 @@
+anthropic>=2.1.0   # optional: model-written seller notes
+pytest>=9.1.1
