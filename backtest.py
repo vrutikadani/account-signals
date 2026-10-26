@@ -12,7 +12,8 @@ Compared:
 Data is synthetic (data/generate.py): each account has a hidden propensity; real buyers
 emit a mix of signals, and one third-party intent feed fires noisily for everyone.
 
-    python backtest.py
+    python backtest.py            # report
+    python backtest.py --check    # exit 1 if the model doesn't beat signal counting
 """
 from __future__ import annotations
 
@@ -87,4 +88,8 @@ def main(seeds: int = 30, k: int = 40) -> dict:
 
 
 if __name__ == "__main__":
-    main()
+    import sys
+    totals = main()
+    if "--check" in sys.argv:   # CI gate: the ranking has to beat counting signals
+        mean = lambda name: sum(totals[name]) / len(totals[name])
+        sys.exit(0 if mean("this model") > mean("signal count") else 1)
