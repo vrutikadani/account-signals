@@ -18,5 +18,5 @@ jobs:
           python-version: "3.12"
       - run: pip install -r requirements.txt
       - run: python -m pytest -q
-      - name: Backtest (ranking must beat signal-count baseline)
-        run: python -c "import backtest,sys; r=backtest.main(); m=lambda k: sum(r[k])/len(r[k]); sys.exit(0 if m('this model') > m('signal count') else 1)"
+      - name: Backtest gate (must beat the signal-count baseline)
+        run: python backtest.py --check
