@@ -1,0 +1,28 @@
+{
+  "_note": "Weights are a starting point set with sellers, then checked against outcomes with backtest.py. Half-life is in days.",
+  "signals": {
+    "pricing_page_visit":   {"weight": 25, "half_life_days": 7,  "source": "web"},
+    "demo_form_abandoned":  {"weight": 30, "half_life_days": 5,  "source": "web"},
+    "webinar_attended":     {"weight": 12, "half_life_days": 21, "source": "events"},
+    "email_reply_positive": {"weight": 35, "half_life_days": 10, "source": "email"},
+    "champion_job_change":  {"weight": 30, "half_life_days": 60, "source": "people"},
+    "hiring_injector_role": {"weight": 15, "half_life_days": 45, "source": "hiring"},
+    "intent_topic_surge":   {"weight": 10, "half_life_days": 14, "source": "third_party_intent"},
+    "competitor_mentioned": {"weight": 20, "half_life_days": 30, "source": "calls"},
+    "consumables_drop":     {"weight": 25, "half_life_days": 30, "source": "product"}
+  },
+  "per_source_cap": 40,
+  "independent_sources_bonus": {"min_sources": 2, "multiplier": 1.25},
+  "fit": {
+    "specialty":  {"dermatology": 30, "plastic surgery": 30, "med spa": 20},
+    "has_medical_director": 10,
+    "locations_2_plus": 10,
+    "in_covered_territory": 10,
+    "min_fit_for_seller_action": 40
+  },
+  "policy": {
+    "act_threshold": 45,
+    "max_new_tasks_per_rep_per_day": 5,
+    "cooldown_days": 14
+  }
+}
