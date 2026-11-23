@@ -13,6 +13,7 @@
   },
   "per_source_cap": 40,
   "independent_sources_bonus": {"min_sources": 2, "multiplier": 1.25},
+  "low_trust_sources": ["third_party_intent"],
   "fit": {
     "specialty":  {"dermatology": 30, "plastic surgery": 30, "med spa": 20},
     "has_medical_director": 10,

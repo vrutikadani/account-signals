@@ -7,7 +7,8 @@ Scoring is as-of `today`: signals dated after `today` are dropped, never scored.
 Intent is the sum of each signal's weight, decayed by age. Three guards keep it honest:
   * decay       - a pricing visit from last week matters more than one from last quarter
   * source cap  - twenty intent-topic pings from one vendor can't outscore one real reply
-  * diversity   - two independent sources agreeing earn a bonus; one noisy source doesn't
+  * diversity   - two independent sources agreeing earn a bonus; sources listed in
+                  `low_trust_sources` still score but don't count toward it
 """
 from __future__ import annotations
 
@@ -65,7 +66,8 @@ def score_account(account: Account, signals: list[Signal], cfg: dict, today: dat
     intent = sum(min(v, cap) for v in by_source.values())
     active_sources = {src for src, v in by_source.items() if v >= 1}
     bonus = cfg["independent_sources_bonus"]
-    if len(active_sources) >= bonus["min_sources"]:
+    trusted = active_sources - set(cfg.get("low_trust_sources", []))
+    if len(trusted) >= bonus["min_sources"]:
         intent *= bonus["multiplier"]
 
     fit, fit_why = fit_score(account, cfg)
