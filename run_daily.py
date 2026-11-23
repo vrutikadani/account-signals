@@ -1,7 +1,9 @@
 """One daily run on synthetic data: score every account, decide actions, write notes.
 
-    python run_daily.py
+    python run_daily.py                 # template notes (default)
+    python run_daily.py --model-notes   # model-written notes; also needs ANTHROPIC_API_KEY
 """
+import sys
 from collections import Counter
 from datetime import date
 
@@ -26,7 +28,7 @@ for s in signals:
 scored = [(a, score_account(a, by_acct[a.account_id], cfg, TODAY)) for a in accounts]
 actions = decide(scored, cfg, TODAY, sdr_pool=["SDR-1", "SDR-2"])
 score_of = {a.account_id: (a, s) for a, s in scored}
-llm = claude_writer()
+llm = claude_writer(enabled="--model-notes" in sys.argv)
 
 print("Actions today:", dict(Counter(x.kind for x in actions)))
 print("\nFirst 8 seller tasks:")
