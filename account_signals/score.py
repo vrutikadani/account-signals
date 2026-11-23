@@ -2,6 +2,8 @@
 
 priority = intent, but only for accounts that clear a fit bar.
 
+Scoring is as-of `today`: signals dated after `today` are dropped, never scored.
+
 Intent is the sum of each signal's weight, decayed by age. Three guards keep it honest:
   * decay       - a pricing visit from last week matters more than one from last quarter
   * source cap  - twenty intent-topic pings from one vendor can't outscore one real reply
@@ -16,7 +18,12 @@ from .model import Account, Score, Signal
 
 
 def decay(age_days: int, half_life_days: float) -> float:
-    return 0.5 ** (max(age_days, 0) / half_life_days)
+    return 0.5 ** (age_days / half_life_days)
+
+
+def as_of(signals: list[Signal], today: date) -> list[Signal]:
+    """Only what was known on `today`. A future-dated signal is a data error or a leak."""
+    return [s for s in signals if s.observed_on <= today]
 
 
 def fit_score(account: Account, cfg: dict) -> tuple[int, list[str]]:
@@ -44,13 +51,13 @@ def score_account(account: Account, signals: list[Signal], cfg: dict, today: dat
     by_source: dict[str, float] = defaultdict(float)
     contributions: list[tuple[float, str, str]] = []
 
-    for s in signals:
+    for s in as_of(signals, today):
         if s.kind not in kinds:
             continue                     # unknown signal types are ignored, never guessed at
         k = kinds[s.kind]
-        value = k["weight"] * decay((today - s.observed_on).days, k["half_life_days"])
-        by_source[k["source"]] += value
         age = (today - s.observed_on).days
+        value = k["weight"] * decay(age, k["half_life_days"])
+        by_source[k["source"]] += value
         label = s.detail or s.kind.replace("_", " ")
         contributions.append((value, f"{label} ({age}d ago)", s.kind))
 
