@@ -1,7 +1,9 @@
 """One daily run on synthetic data: score every account, decide actions, write notes.
 
-    python run_daily.py
+    python run_daily.py                 # template notes (default)
+    python run_daily.py --model-notes   # model-written notes; also needs ANTHROPIC_API_KEY
 """
+import sys
 from collections import Counter
 from datetime import date
 
@@ -26,7 +28,7 @@ for s in signals:
 scored = [(a, score_account(a, by_acct[a.account_id], cfg, TODAY)) for a in accounts]
 actions = decide(scored, cfg, TODAY, sdr_pool=["SDR-1", "SDR-2"])
 score_of = {a.account_id: (a, s) for a, s in scored}
-llm = claude_writer()
+llm = claude_writer(enabled="--model-notes" in sys.argv)
 
 print("Actions today:", dict(Counter(x.kind for x in actions)))
 print("\nFirst 8 seller tasks:")
@@ -34,7 +36,13 @@ for act in [x for x in actions if x.kind in {"sdr_task", "owner_task", "expansio
     acct, s = score_of[act.account_id]
     print(f"  [{act.kind:<14}] {act.assignee:<10} intent {s.intent:>5}  {write_note(acct, s, act, llm)}")
 
+overflow = [x for x in actions if "overflow" in x.why]
+print(f"\nOverflow (over a rep's daily cap, not assigned today; re-scored tomorrow): {len(overflow)}")
+for act in overflow[:4]:
+    print(f"  {score_of[act.account_id][0].name}: {act.why}")
+
 print("\nWhy some high-intent accounts got no seller task:")
-for act in [x for x in actions if x.kind in {"nurture", "none"} and score_of[x.account_id][1].intent >= cfg['policy']['act_threshold']][:4]:
+for act in [x for x in actions if x.kind in {"nurture", "none"} and x not in overflow
+            and score_of[x.account_id][1].intent >= cfg['policy']['act_threshold']][:4]:
     acct, s = score_of[act.account_id]
     print(f"  {acct.name}: intent {s.intent} -> {act.kind}: {act.why}")

@@ -12,9 +12,9 @@ Short records of the choices that shaped this design, and what would change them
 
 ## 2. Cap each source, then reward agreement
 
-**Decision:** each signal source contributes at most 40 points; two or more independent sources multiply intent by 1.25.
+**Decision:** each signal source contributes at most 40 points; two or more independent sources multiply intent by 1.25. Sources listed in `low_trust_sources` (the third-party intent feed) still add intent but don't count toward the two.
 
-**Why:** third-party intent feeds are cheap to add and noisy. Without a cap, the account with the most vendor pings wins. Agreement between sources that don't share data (a web visit and a reply, a job change and a call mention) is much harder to fake.
+**Why:** third-party intent feeds are cheap to add and noisy. Without a cap, the account with the most vendor pings wins. Without the low-trust list, one real visit plus one vendor ping would earn the same bonus as two real signals. Agreement between sources that don't share data (a web visit and a reply, a job change and a call mention) is much harder to fake.
 
 **Would change if:** one source proved predictive on its own in replay, for example first-party product usage. Its cap would go up.
 
@@ -28,13 +28,15 @@ Short records of the choices that shaped this design, and what would change them
 
 ## 4. Capacity lives in the policy
 
-**Decision:** a rep gets at most five new tasks a day; overflow carries to tomorrow in priority order.
+**Decision:** a rep gets at most five new tasks a day, counted across every task type (open opportunity, expansion, owned, SDR). Overflow is reported in the daily output, not carried; the next run re-scores from scratch. Opportunities and customers with no owner go to a named unassigned queue.
 
 **Why:** a task list longer than a day's work gets triaged by the rep instead of the system, usually by recency or by who they already know. That silently replaces the ranking.
 
+**Would change if:** overflow turns out to matter day to day. A carry-over list would then need its own ordering against fresh signals.
+
 ## 5. The model writes the note, nothing else
 
-**Decision:** a language model may write the two-sentence seller note from the decided action and its reasons. It never sees raw signals and never changes a score or an action. A failed or off-topic note falls back to a template.
+**Decision:** a language model may write the two-sentence seller note from the decided action and its reasons. It never sees raw signals and never changes a score or an action. A failed note falls back to a template: one that doesn't name the account by full name or ID, or that adds a number or claim word not in the evidence. The model path is off unless explicitly enabled.
 
 **Why:** the note is where fluency helps and errors are cheap. Scoring and routing are where errors are expensive and need to be explainable line by line.
 
