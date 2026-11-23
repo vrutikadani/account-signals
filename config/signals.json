@@ -24,6 +24,7 @@
   "policy": {
     "act_threshold": 45,
     "max_new_tasks_per_rep_per_day": 5,
-    "cooldown_days": 14
+    "cooldown_days": 14,
+    "unassigned_queue": "UNASSIGNED-REVIEW"
   }
 }
