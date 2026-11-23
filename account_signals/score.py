@@ -6,7 +6,7 @@ Scoring is as-of `today`: signals dated after `today` are dropped, never scored.
 
 Intent is the sum of each signal's weight, decayed by age. Three guards keep it honest:
   * decay       - a pricing visit from last week matters more than one from last quarter
-  * source cap  - twenty intent-topic pings from one vendor can't outscore one real reply
+  * source cap  - twenty intent-topic pings from one vendor add at most `per_source_cap`
   * diversity   - two independent sources agreeing earn a bonus; sources listed in
                   `low_trust_sources` still score but don't count toward it
 """

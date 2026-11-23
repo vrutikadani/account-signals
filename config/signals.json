@@ -1,5 +1,5 @@
 {
-  "_note": "Weights are a starting point set with sellers, then checked against outcomes with backtest.py. Half-life is in days.",
+  "_note": "Illustrative weights for the synthetic world; not tuned on real data. Half-life is in days.",
   "signals": {
     "pricing_page_visit":   {"weight": 25, "half_life_days": 7,  "source": "web"},
     "demo_form_abandoned":  {"weight": 30, "half_life_days": 5,  "source": "web"},
