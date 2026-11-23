@@ -1,8 +1,9 @@
 """Backtest: does this ranking beat the obvious alternatives at seller capacity?
 
 The question is never "is the score accurate," it's "if sellers can only work K accounts
-this week, which list gets them more meetings?" So each method ranks the same accounts,
-we take the top K, and count how many booked a meeting in the next 30 days.
+this week, which list gets them more meetings?" So each method ranks the same accounts
+using only signals dated on or before `today`, we take the top K, and count how many of
+them have a meeting dated in (today, today + 30 days].
 
 Compared:
   signal count   - the default most teams start with: more signals = hotter
@@ -10,7 +11,10 @@ Compared:
   this model     - decay + source caps + diversity bonus + fit gate
 
 Data is synthetic (data/generate.py): each account has a hidden propensity; real buyers
-emit a mix of signals, and one third-party intent feed fires noisily for everyone.
+emit a mix of signals, and one third-party intent feed fires noisily for everyone. The
+same propensity drives the meetings, and the generator was written alongside the scoring
+config, so these numbers are optimistic. They show the guards do what they were built
+to do on a world built to need them; they do not validate the weights.
 
     python backtest.py            # report
     python backtest.py --check    # exit 1 if the model doesn't beat signal counting
@@ -22,21 +26,29 @@ import random
 from datetime import date
 
 from account_signals import load_config
-from account_signals.score import score_account
+from account_signals.model import Meeting
+from account_signals.score import as_of, score_account
 from data.generate import make_world
 
 TODAY = date(2026, 10, 1)
+WINDOW_DAYS = 30
 
 
-def top_k_hits(ranked_ids: list[str], outcomes: dict[str, bool], k: int) -> int:
-    return sum(outcomes[a] for a in ranked_ids[:k])
+def meetings_in_window(meetings: list[Meeting], today: date, days: int = WINDOW_DAYS) -> set[str]:
+    """Accounts with a meeting in (today, today + days]. Earlier and later ones don't count."""
+    return {m.account_id for m in meetings if 0 < (m.booked_on - today).days <= days}
 
 
-def run(seed: int = 7, k: int = 40, verbose: bool = True) -> dict:
+def top_k_hits(ranked_ids: list[str], booked: set[str], k: int) -> int:
+    return sum(a in booked for a in ranked_ids[:k])
+
+
+def run(seed: int = 7, k: int = 40, verbose: bool = True, world=None) -> dict:
     cfg = load_config()
-    accounts, signals, outcomes = make_world(seed=seed, today=TODAY)
+    accounts, signals, meetings = world or make_world(seed=seed, today=TODAY)
+    booked = meetings_in_window(meetings, TODAY)
     by_acct: dict[str, list] = {a.account_id: [] for a in accounts}
-    for s in signals:
+    for s in as_of(signals, TODAY):      # every method sees only what was known on TODAY
         by_acct[s.account_id].append(s)
 
     naive = sorted(accounts, key=lambda a: len(by_acct[a.account_id]), reverse=True)
@@ -46,6 +58,7 @@ def run(seed: int = 7, k: int = 40, verbose: bool = True) -> dict:
         k_["half_life_days"] = 10_000
     unguarded["per_source_cap"] = 10_000
     unguarded["independent_sources_bonus"]["multiplier"] = 1.0
+    unguarded["low_trust_sources"] = []
     unguarded["fit"]["min_fit_for_seller_action"] = 0
 
     def rank(c):
@@ -55,15 +68,15 @@ def run(seed: int = 7, k: int = 40, verbose: bool = True) -> dict:
     rnd = [a.account_id for a in accounts]
     random.Random(seed).shuffle(rnd)
 
-    base_rate = sum(outcomes.values()) / len(outcomes)
     results = {
-        "random": top_k_hits(rnd, outcomes, k),
-        "signal count": top_k_hits([a.account_id for a in naive], outcomes, k),
-        "no guards": top_k_hits(rank(unguarded), outcomes, k),
-        "this model": top_k_hits(rank(cfg), outcomes, k),
+        "random": top_k_hits(rnd, booked, k),
+        "signal count": top_k_hits([a.account_id for a in naive], booked, k),
+        "no guards": top_k_hits(rank(unguarded), booked, k),
+        "this model": top_k_hits(rank(cfg), booked, k),
     }
     if verbose:
-        print(f"{len(accounts)} accounts, {sum(outcomes.values())} booked a meeting ({base_rate:.0%} base rate)")
+        print(f"{len(accounts)} accounts, {len(booked)} with a meeting in the next {WINDOW_DAYS} days "
+              f"({len(booked) / len(accounts):.0%} base rate)")
         print(f"Meetings in the top {k} (one week of seller capacity):")
         for name, hits in results.items():
             print(f"  {name:<13} {hits:>3}   {hits / k:.0%} of worked accounts")
@@ -79,7 +92,8 @@ def main(seeds: int = 30, k: int = 40) -> dict:
         for name, hits in r.items():
             totals.setdefault(name, []).append(hits)
         wins += r["this model"] > max(v for n, v in r.items() if n != "this model")
-    print(f"{seeds} synthetic worlds x 400 accounts, top {k} worked per week")
+    print(f"{seeds} synthetic worlds x 400 accounts, top {k} worked per week, "
+          f"meetings dated in the {WINDOW_DAYS} days after {TODAY}")
     print(f"{'method':<13} {'meetings (mean)':>16} {'worst':>6} {'best':>5}")
     for name, hits in totals.items():
         print(f"{name:<13} {sum(hits) / len(hits):>16.1f} {min(hits):>6} {max(hits):>5}")

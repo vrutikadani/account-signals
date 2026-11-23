@@ -14,6 +14,13 @@ class Signal:
     detail: str = ""          # human-readable evidence, shown to the seller
 
 
+@dataclass(frozen=True)
+class Meeting:
+    """A dated outcome. The backtest only counts ones inside its forward window."""
+    account_id: str
+    booked_on: date
+
+
 @dataclass
 class Account:
     account_id: str
